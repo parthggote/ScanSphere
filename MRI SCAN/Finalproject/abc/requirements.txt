@@ -1,0 +1,14 @@
+numpy
+onnxruntime
+flask
+werkzeug
+reportlab
+torch
+torchvision
+scipy
+opencv-python-headless
+pyjwt
+requests
+python-dotenv
+ollama
+gunicorn 

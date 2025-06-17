@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - ScanSphere</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars-container">
+        <div class="stars"></div>
+        <div class="stars2"></div>
+        <div class="stars3"></div>
+    </div>
+
+    <div class="auth-container">
+        <!-- Left side - Decorative -->
+        <div class="auth-decorative">
+            <div class="auth-decorative-content">
+                <div class="logo">
+                    <i class="fas fa-brain"></i>
+                    <h1 class="logo-text">ScanSphere</h1>
+                </div>
+                
+                <div class="auth-decorative-text">
+                    <h2>Join ScanSphere</h2>
+                    <p>Create an account to start analyzing MRI scans with our advanced AI technology.</p>
+                </div>
+                
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="feature-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <p>Advanced brain tumor detection</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <p>Secure and private analysis</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <p>Detailed diagnostic reports</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <p>AI-powered insights</p>
+                    </div>
+                </div>
+                
+                <div class="floating-elements">
+                    <div class="floating-element fe-1">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="floating-element fe-2">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="floating-element fe-3">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="auth-decorative-shapes">
+                <div class="auth-shape auth-shape-1"></div>
+                <div class="auth-shape auth-shape-2"></div>
+            </div>
+        </div>
+        
+        <!-- Right side - Signup form -->
+        <div class="auth-form-container">
+            <div class="auth-header">
+                <div class="mobile-logo">
+                    <i class="fas fa-brain"></i>
+                    <span>ScanSphere</span>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            
+            <div class="auth-form-content">
+                <div class="auth-form-header">
+                    <h2>Create an account</h2>
+                    <p>Fill in your details to get started</p>
+                </div>
+                
+                <form id="signup-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="name" placeholder="John Doe" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="signup-email" placeholder="email@example.com" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="signup-password" placeholder="••••••••" required>
+                            <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength">
+                            <div class="strength-meter">
+                                <div class="strength-segment"></div>
+                                <div class="strength-segment"></div>
+                                <div class="strength-segment"></div>
+                                <div class="strength-segment"></div>
+                            </div>
+                            <span class="strength-text">Password strength</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirm-password" placeholder="••••••••" required>
+                            <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-error" id="password-error"></div>
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="terms" required>
+                        <label for="terms">
+                            I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <span class="btn-text">Create account</span>
+                        <i class="fas fa-arrow-right"></i>
+                        <span class="btn-loader"></span>
+                    </button>
+                </form>
+                
+                <div class="auth-divider">
+                    <span>or sign up with</span>
+                </div>
+                
+                <div class="social-login">
+                    <button class="btn btn-social">
+                        <i class="fab fa-google"></i>
+                        <span>Google</span>
+                    </button>
+                    <button class="btn btn-social">
+                        <i class="fab fa-microsoft"></i>
+                        <span>Microsoft</span>
+                    </button>
+                </div>
+                
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="login.html">Sign in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

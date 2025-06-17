@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Real-Time MRI Analysis</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .main-content {
+      padding: 2rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .upload-container {
+      width: 100%;
+      max-width: 800px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .drop-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 3rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 1rem;
+    }
+    
+    .drop-zone:hover, .drop-zone.active {
+      border-color: #4a90e2;
+      background-color: rgba(74, 144, 226, 0.05);
+    }
+    
+    .drop-zone i {
+      font-size: 3rem;
+      color: rgba(255, 255, 255, 0.3);
+      margin-bottom: 1rem;
+    }
+    
+    .drop-zone p {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 0;
+    }
+    
+    #file-input {
+      display: none;
+    }
+    
+    .btn-analyze {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: all 0.3s;
+      margin-top: 1rem;
+    }
+    
+    .btn-analyze:hover {
+      background-color: #3a7bc8;
+      transform: translateY(-2px);
+    }
+    
+    .btn-analyze:disabled {
+      background-color: #2c3e50;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .results-container {
+      width: 100%;
+      max-width: 800px;
+      display: none;
+    }
+    
+    .results-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    
+    .result-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      flex: 1 1 100%;
+    }
+    
+    .image-result {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    
+    .image-result img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+    }
+    
+    .detection-result {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    
+    .detection-result h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .detection-result p {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .report-card {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    
+    .report-content {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+    }
+    
+    .report-content h3 {
+      color: #4a90e2;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 5px;
+    }
+    
+    .report-content ul {
+      padding-left: 1.5rem;
+    }
+    
+    .report-content li {
+      margin-bottom: 0.5rem;
+    }
+    
+    .report-content strong {
+      color: #ffcc00;
+    }
+    
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .loading-state i {
+      font-size: 2rem;
+      color: #4a90e2;
+      animation: spin 1.5s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .realtime-badge {
+      background-color: #4a90e2;
+      color: white;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    
+    .confidence-bar {
+      height: 8px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+    
+    .confidence-level {
+      height: 100%;
+      background-color: #4a90e2;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 0.5rem;
+      font-size: 0.8rem;
+      color: white;
+      transition: width 0.5s ease-out;
+    }
+    
+    .positive .confidence-level {
+      background-color: #e74c3c;
+    }
+    
+    .negative .confidence-level {
+      background-color: #2ecc71;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="page-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <img src="{{ url_for('static', filename='scansphere logo.png') }}" alt="Logo">
+            <h1>ScanSphere</h1>
+          </div>
+          <div class="header-actions">
+            <!-- User profile will be displayed here when logged in -->
+            <div id="user-profile-container" class="user-profile-header">
+              <!-- This will be populated by JavaScript if user is logged in -->
+            </div>
+            <div class="theme-toggle">
+              <button id="theme-toggle-btn">
+                <i class="fas fa-moon"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <h2 class="page-title">Real-Time MRI Analysis</h2>
+      <p class="page-description">
+        Upload a brain MRI scan image for instant analysis. No static data is stored for improved privacy.
+      </p>
+      
+      <div class="upload-container">
+        <div id="drop-zone" class="drop-zone">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>Drag & drop your MRI scan here or click to browse</p>
+          <input type="file" id="file-input" accept=".jpg,.jpeg,.png">
+        </div>
+        <div id="file-info"></div>
+        <button id="analyze-btn" class="btn-analyze" disabled>Analyze Image</button>
+      </div>
+      
+      <div id="loading-state" class="loading-state">
+        <i class="fas fa-spinner"></i>
+        <p>Analyzing your MRI scan in real-time...</p>
+      </div>
+      
+      <div id="results-container" class="results-container">
+        <div class="realtime-badge">
+          <i class="fas fa-bolt"></i> Real-Time Analysis
+        </div>
+        
+        <div class="results-content">
+          <div class="result-card">
+            <div id="image-result" class="image-result"></div>
+            
+            <div id="detection-result" class="detection-result"></div>
+            
+            <div class="report-card">
+              <h4><i class="fas fa-file-medical"></i> Analysis Report</h4>
+              <div id="report-content" class="report-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div class="container">
+        <p>&copy; 2023 ScanSphere - Advanced Medical Imaging Analysis</p>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+      const fileInfo = document.getElementById('file-info');
+      const analyzeBtn = document.getElementById('analyze-btn');
+      const loadingState = document.getElementById('loading-state');
+      const resultsContainer = document.getElementById('results-container');
+      const imageResult = document.getElementById('image-result');
+      const detectionResult = document.getElementById('detection-result');
+      const reportContent = document.getElementById('report-content');
+      const themeToggleBtn = document.getElementById('theme-toggle-btn');
+      
+      // Check if user is logged in and update profile display
+      updateUserProfileDisplay();
+      
+      // Theme toggle
+      themeToggleBtn.addEventListener('click', function() {
+        const theme = document.documentElement.getAttribute('data-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'light' : 'dark');
+        themeToggleBtn.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+      });
+      
+      // Function to update user profile display
+      function updateUserProfileDisplay() {
+        const userProfileContainer = document.getElementById('user-profile-container');
+        if (!userProfileContainer) return;
+        
+        // Check for auth token in sessionStorage or localStorage
+        const token = sessionStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (token) {
+          // Try to get user data from server first
+          fetch('/api/user', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.user) {
+              displayUserProfile(data.user, userProfileContainer);
+            } else {
+              // If server request fails, try using stored data
+              useStoredUserData(userProfileContainer);
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching user data from server:', error);
+            // Fall back to stored data
+            useStoredUserData(userProfileContainer);
+          });
+        }
+      }
+      
+      // Helper function to use stored user data
+      function useStoredUserData(userProfileContainer) {
+        // Check for user data in sessionStorage (from Node.js auth) or localStorage
+        const userData = sessionStorage.getItem('userData') || localStorage.getItem('user');
+        
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            displayUserProfile(user, userProfileContainer);
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      // Helper function to display user profile
+      function displayUserProfile(user, container) {
+        const username = user.username || user.email.split('@')[0]; // Fallback to email username
+        
+        // Generate initials from the username
+        let initials = '';
+        const nameParts = username.split(/[\s_\-\.]+/); // Split by space, underscore, dash or dot
+        if (nameParts.length >= 2) {
+          // Take first letter of first and last part
+          initials = (nameParts[0][0] + nameParts[nameParts.length-1][0]).toUpperCase();
+        } else if (username.length >= 2) {
+          // Take first two letters if single name
+          initials = username.substring(0, 2).toUpperCase();
+        } else if (username.length === 1) {
+          // If only one character
+          initials = username.toUpperCase();
+        } else {
+          // Fallback if no name available
+          initials = 'U';
+        }
+        
+        // Generate a consistent color based on the username
+        const colors = [
+          '#FF5630', '#FF8B00', '#FFC400', '#36B37E', 
+          '#00B8D9', '#6554C0', '#8777D9', '#998DD9', 
+          '#C0B6F2', '#4C9AFF', '#0052CC', '#0747A6'
+        ];
+        const colorIndex = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+        const bgColor = colors[colorIndex];
+        
+        // Header display for real-time analysis page
+        container.innerHTML = `
+          <div class="user-profile-info">
+            <div class="user-avatar" style="background-color: ${bgColor}; color: white; display: flex; justify-content: center; align-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: bold;">
+              ${initials}
+            </div>
+            <div class="username">${username}</div>
+          </div>
+          <button id="logout-btn" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        `;
+        
+        // Add logout functionality
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function() {
+            // Clear user data
+            sessionStorage.removeItem('userData');
+            sessionStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            
+            // Redirect to login page
+            window.location.href = '/';
+          });
+        }
+      }
+      
+      // File drop handling
+      dropZone.addEventListener('click', () => fileInput.click());
+      
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('active');
+      });
+      
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('active');
+      });
+      
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+        
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          updateFileInfo();
+        }
+      });
+      
+      fileInput.addEventListener('change', updateFileInfo);
+      
+      function updateFileInfo() {
+        if (fileInput.files.length) {
+          const file = fileInput.files[0];
+          fileInfo.innerHTML = `
+            <div class="selected-file">
+              <i class="fas fa-file-image"></i>
+              <span>${file.name}</span>
+              <small>(${formatFileSize(file.size)})</small>
+            </div>
+          `;
+          analyzeBtn.disabled = false;
+        } else {
+          fileInfo.innerHTML = '';
+          analyzeBtn.disabled = true;
+        }
+      }
+      
+      function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+        else return (bytes / 1048576).toFixed(2) + ' MB';
+      }
+      
+      // Image analysis
+      analyzeBtn.addEventListener('click', async () => {
+        if (!fileInput.files.length) return;
+        
+        // Reset and show loading state
+        loadingState.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        try {
+          // Send to backend
+          const response = await fetch('/analyze_image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error('Analysis failed. Please try again.');
+          }
+          
+          const result = await response.json();
+          displayResults(result);
+          
+        } catch (error) {
+          alert(error.message || 'An error occurred during analysis');
+        } finally {
+          loadingState.style.display = 'none';
+        }
+      });
+      
+      function displayResults(result) {
+        // Display the image
+        imageResult.innerHTML = `<img src="${result.image}" alt="Analyzed MRI Scan">`;
+        
+        // Display the prediction
+        const prediction = result.prediction;
+        const classId = prediction.class_id;
+        
+        detectionResult.innerHTML = `
+          <h3 class="${classId === 1 ? 'text-danger' : 'text-success'}">
+            <i class="${classId === 1 ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'}"></i>
+            ${prediction.class}
+          </h3>
+          <p>${classId === 1 ? 'Tumor detected in the MRI scan' : 'No tumor detected in the MRI scan'}</p>
+          <div class="confidence-bar ${classId === 1 ? 'positive' : 'negative'}">
+            <div class="confidence-level" style="width: ${prediction.confidence}%">
+              ${prediction.confidence.toFixed(1)}%
+            </div>
+          </div>
+        `;
+        
+        // Display the report
+        reportContent.innerHTML = result.report;
+        
+        // Show results
+        resultsContainer.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html> 

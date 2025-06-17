@@ -1,0 +1,260 @@
+<!DOCTYPE
+html >
+  <html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanSphere - Brain Tumor Detection</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars-container">
+        <div class="stars"></div>
+        <div class="stars2"></div>
+        <div class="stars3"></div>
+    </div>
+
+    <div class="particles-container">
+        <div class="particles"></div>
+    </div>
+
+    <header class="site-header">
+        <div class="container">
+            <div class="logo">
+                <div class="logo-icon">
+                    <!-- Updated logo with the provided image -->
+                    <img src="scansphere logo.png" alt="ScanSphere Logo" class="logo-image">
+                </div>
+                <h1 class="logo-text">ScanSphere</h1>
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="auth-buttons">
+                    <a href="login.html" class="btn-text">Sign in</a>
+                    <a href="signup.html" class="btn btn-primary">Get started</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero section -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <div class="badge">
+                            <span>AI-Powered</span>
+                            <div class="pulse"></div>
+                        </div>
+                        <h1 class="hero-title">Advanced Brain Tumor Detection with AI</h1>
+                        <p class="hero-subtitle">Upload MRI scans to detect the presence of brain tumors with our state-of-the-art AI technology.</p>
+                        
+                        <div class="hero-actions">
+                            <a href="signup.html" class="btn btn-primary btn-lg btn-glow">
+                                Get started
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="login.html" class="btn btn-outline btn-lg">
+                                Sign in
+                            </a>
+                        </div>
+                        
+                        <div class="security-badge">
+                            <i class="fas fa-lock"></i>
+                            <span>Your data is secure and private</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-image">
+                        <div class="brain-model-container">
+                            <div class="brain-model">
+                                <div class="scan-line"></div>
+                                <div class="scan-overlay"></div>
+                                <img src="https://placehold.co/800x600/252836/FFFFFF?text=Brain+MRI+Scan" alt="Brain MRI Scan">
+                                <div class="scan-text">
+                                    <div class="scan-text-line">BRAIN MRI SCAN</div>
+                                    <div class="scan-text-line">ANALYSIS IN PROGRESS</div>
+                                    <div class="scan-progress">
+                                        <div class="scan-progress-bar"></div>
+                                    </div>
+                                </div>
+                                <div class="detection-points">
+                                    <div class="detection-point" style="top: 30%; left: 40%;">
+                                        <div class="point-pulse"></div>
+                                        <div class="point-data">
+                                            <div class="point-label">Region A</div>
+                                            <div class="point-value">98.7% Match</div>
+                                        </div>
+                                    </div>
+                                    <div class="detection-point" style="top: 45%; left: 60%;">
+                                        <div class="point-pulse"></div>
+                                        <div class="point-data">
+                                            <div class="point-label">Region B</div>
+                                            <div class="point-value">87.2% Match</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="scan-grid"></div>
+                            </div>
+                            <div class="data-points">
+                                <div class="data-point">
+                                    <div class="data-label">Confidence</div>
+                                    <div class="data-value">98.7%</div>
+                                </div>
+                                <div class="data-point">
+                                    <div class="data-label">Processing</div>
+                                    <div class="data-value">0.8s</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </section>
+
+        <!-- Features section -->
+        <section class="features">
+            <div class="container">
+                <h2 class="section-title">How ScanSphere Works</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h3>Upload MRI Scan</h3>
+                        <p>Upload your brain MRI scan in JPG, JPEG, or PNG format.</p>
+                        <div class="feature-number">01</div>
+                        <div class="feature-hover-effect"></div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>AI Analysis</h3>
+                        <p>Our AI model (ResNet-50) analyzes the scan for tumor presence.</p>
+                        <div class="feature-number">02</div>
+                        <div class="feature-hover-effect"></div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h3>Detailed Results</h3>
+                        <p>Get comprehensive results with confidence scores and visualization.</p>
+                        <div class="feature-number">03</div>
+                        <div class="feature-hover-effect"></div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h3>Secure Storage</h3>
+                        <p>Your scans and results are securely stored for future reference.</p>
+                        <div class="feature-number">04</div>
+                        <div class="feature-hover-effect"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats section -->
+        <section class="stats">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" data-count="98">0</div>
+                        <div class="stat-label">Accuracy Rate</div>
+                        <div class="stat-bar"></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" data-count="10000">0</div>
+                        <div class="stat-label">Scans Analyzed</div>
+                        <div class="stat-bar"></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" data-count="500">0</div>
+                        <div class="stat-label">Medical Partners</div>
+                        <div class="stat-bar"></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" data-count="24">0</div>
+                        <div class="stat-label">Hour Support</div>
+                        <div class="stat-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA section -->
+        <section class="cta">
+            <div class="container">
+                <div class="cta-content">
+                    <h2>Ready to get started?</h2>
+                    <p>Create your account today and start analyzing MRI scans with our advanced AI technology.</p>
+                    <div class="cta-actions">
+                        <a href="signup.html" class="btn btn-light btn-glow">Create account</a>
+                        <a href="login.html" class="btn btn-outline-light">Sign in</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cta-bg">
+                <div class="cta-shape cta-shape-1"></div>
+                <div class="cta-shape cta-shape-2"></div>
+                <div class="cta-shape cta-shape-3"></div>
+                <div class="cta-neurons">
+                    <div class="neuron n1"></div>
+                    <div class="neuron n2"></div>
+                    <div class="neuron n3"></div>
+                    <div class="neuron n4"></div>
+                    <div class="neuron n5"></div>
+                    <div class="neuron-connection nc1"></div>
+                    <div class="neuron-connection nc2"></div>
+                    <div class="neuron-connection nc3"></div>
+                    <div class="neuron-connection nc4"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="scansphere logo.png" alt="ScanSphere Logo" class="logo-image-small">
+                    <span>ScanSphere</span>
+                </div>
+                
+                <div class="footer-links">
+                    <a href="#">Terms</a>
+                    <a href="#">Privacy</a>
+                    <a href="#">Contact</a>
+                </div>
+                
+                <div class="footer-copyright">
+                    © <span id="current-year"></span> ScanSphere. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

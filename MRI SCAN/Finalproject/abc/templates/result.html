@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Brain Tumor Detection - Results</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    /* Added styles for optimized image display */
+    .image-container {
+      width: 100%;
+      height: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .result-image {
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+    }
+    
+    .processing-time {
+      font-size: 0.8rem;
+      color: #777;
+      margin-top: 0.5rem;
+      text-align: right;
+    }
+    
+    /* Faster loading indicator */
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+    
+    .loading-indicator {
+      animation: pulse 1.5s infinite;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    /* Enhanced report styling */
+    .report-content {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .report-content h3 {
+      color: #4a90e2;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 1.3rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 5px;
+    }
+
+    .report-content p {
+      margin-bottom: 15px;
+    }
+
+    .report-content ul {
+      margin-bottom: 15px;
+      padding-left: 20px;
+    }
+
+    .report-content li {
+      margin-bottom: 8px;
+      position: relative;
+      list-style-type: none;
+      padding-left: 20px;
+    }
+
+    .report-content li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #4a90e2;
+      font-weight: bold;
+    }
+
+    .report-content strong {
+      color: #ffcc00;
+      font-weight: 600;
+    }
+    
+    /* Download report button */
+    .download-btn {
+      background: linear-gradient(135deg, #4a90e2, #2c7be5);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-top: 15px;
+    }
+
+    .download-btn:hover {
+      background: linear-gradient(135deg, #2c7be5, #185ec2);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Report modal */
+    .report-modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.7);
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+
+    .report-modal.show {
+      display: block;
+      opacity: 1;
+    }
+
+    .report-modal-content {
+      background-color: var(--card-bg);
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .show .report-modal-content {
+      transform: translateY(0);
+    }
+
+    .report-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+
+    .report-modal-title {
+      font-size: 1.5rem;
+      color: var(--heading-color);
+      margin: 0;
+    }
+
+    .report-modal-close {
+      color: var(--text-color);
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .report-modal-close:hover {
+      color: var(--highlight-color);
+    }
+
+    .report-modal-body {
+      padding: 10px 0;
+    }
+
+    .report-preview-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .report-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .report-feature {
+      background-color: rgba(74, 144, 226, 0.1);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.9rem;
+      color: #4a90e2;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .report-feature i {
+      font-size: 0.8rem;
+    }
+
+    /* Dark mode adjustments */
+    [data-theme="dark"] .report-content {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .report-content {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="light"] .report-content h3 {
+      color: #2c7be5;
+    }
+
+    [data-theme="light"] .report-content li::before {
+      color: #2c7be5;
+    }
+
+    [data-theme="light"] .report-content strong {
+      color: #d97706;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <img class="logo_img" src="{{ url_for('static', filename='scansphere logo (1).png') }}" alt="Logo">
+                </div>
+                <span class="logo-text">ScanSphere</span>
+            </div>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-nav">
+                <a href="{{ url_for('index') }}" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Results</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-divider"></div>
+            
+            <div class="scan-history">
+                <h6 class="sidebar-title">Recent Scans</h6>
+                <div class="scan-item">
+                    <i class="fas fa-file-medical"></i>
+                    <span>Scan_{{ scan_data.filename if scan_data and scan_data.filename else 'Recent' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header-actions">
+            <div id="user-profile-container" class="user-profile-header">
+                <!-- This will be populated by JavaScript if user is logged in -->
+            </div>
+            <div class="theme-toggle">
+                <button id="theme-toggle-btn">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+      <h2 class="results-title">MRI Scan Analysis Results</h2>
+      <div class="processing-time">Processing time: {{ processing_time }}</div>
+
+      <div class="results-container">
+        <!-- MRI Image -->
+        <div class="results-card image-card">
+          <h4>Uploaded MRI Scan</h4>
+          <div class="image-container">
+            {% if is_base64 %}
+              <img src="{{ image_file }}" alt="Uploaded MRI Scan" class="result-image">
+            {% else %}
+              <img src="{{ url_for('static', filename=image_file) }}" alt="Uploaded MRI Scan" class="result-image">
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Prediction Card -->
+        <div class="results-card analysis-card">
+          <div class="{{ 'result-positive' if prediction.class_id == 1 else 'result-negative' }}">
+            <h3>
+              <i class="{{ 'fas fa-exclamation-triangle' if prediction.class_id == 1 else 'fas fa-check-circle' }} result-icon"></i>
+              {{ prediction.class }}
+            </h3>
+            <p class="result-description">
+              The MRI scan shows {{ 'possible signs of a brain tumor' if prediction.class_id == 1 else 'no signs of a brain tumor' }}.
+            </p>
+            <div class="confidence-container">
+              <div class="confidence-bar">
+                <div class="confidence-level" style="width: {{ prediction.confidence }}%">
+                  <span>{{ prediction.confidence|round(2) }}%</span>
+                </div>
+              </div>
+              <p class="confidence-label">Confidence</p>
+            </div>
+            
+            <!-- Add download report button -->
+            <div class="download-container mt-3">
+              <button id="download-report-btn" class="btn btn-primary">
+                <i class="fas fa-download me-2"></i>Download PDF Report
+              </button>
+            </div>
+
+            <div class="prediction-breakdown">
+              <h5>Prediction Breakdown:</h5>
+              <div class="breakdown-item">
+                <span>No Tumor</span>
+                <div class="breakdown-bar">
+                  <div class="breakdown-fill" style="width: {{ (prediction.probabilities[0] * 100)|round(2) }}%"></div>
+                </div>
+                <span>{{ (prediction.probabilities[0] * 100)|round(2) }}%</span>
+              </div>
+              <div class="breakdown-item">
+                <span>Tumor Detected</span>
+                <div class="breakdown-bar">
+                  <div class="breakdown-fill" style="width: {{ (prediction.probabilities[1] * 100)|round(2) }}%"></div>
+                </div>
+                <span>{{ (prediction.probabilities[1] * 100)|round(2) }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagnostic Report -->
+      <div class="results-card report-card">
+        <h4><i class="fas fa-file-medical"></i> Diagnostic Report</h4>
+        <div class="report-content">
+          {{ diagnostic_report | safe }}
+        </div>
+        <button id="download-report-btn" class="download-btn">
+          <i class="fas fa-download"></i>
+          Download PDF Report
+        </button>
+        <button id="report-info-btn" class="btn btn-sm btn-outline-info mt-2">
+          <i class="fas fa-info-circle"></i>
+          What's included in the report?
+        </button>
+      </div>
+
+      <!-- Report Modal -->
+      <div id="report-modal" class="report-modal">
+        <div class="report-modal-content">
+          <div class="report-modal-header">
+            <h4 class="report-modal-title">Comprehensive PDF Report</h4>
+            <span class="report-modal-close">&times;</span>
+          </div>
+          <div class="report-modal-body">
+            <div class="text-center mb-3">
+              {% if is_base64 %}
+                <img src="{{ image_file }}" alt="MRI Scan Preview" class="report-preview-img" style="max-height: 200px;">
+              {% else %}
+                <img src="{{ url_for('static', filename=image_file) }}" alt="MRI Scan Preview" class="report-preview-img" style="max-height: 200px;">
+              {% endif %}
+            </div>
+            
+            <p>Your comprehensive PDF report includes:</p>
+            
+            <div class="report-features">
+              <div class="report-feature"><i class="fas fa-brain"></i> Highlighted Tumor Region</div>
+              <div class="report-feature"><i class="fas fa-info-circle"></i> Detailed Tumor Analysis</div>
+              <div class="report-feature"><i class="fas fa-ruler"></i> Size and Location</div>
+              <div class="report-feature"><i class="fas fa-user-md"></i> Specialist Recommendations</div>
+            </div>
+            
+            <p>The report highlights the exact tumor region based on the analysis, and provides recommendations based on the specific tumor type detected.</p>
+            
+            <p>Perfect for sharing with your healthcare provider for a more detailed discussion about your scan results.</p>
+            
+            <div class="text-center mt-3">
+              <button id="modal-download-btn" class="download-btn mx-auto">
+                <i class="fas fa-download"></i>
+                Download PDF Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Chat Section -->
+      <div class="results-card chat-card">
+        <h4><i class="fas fa-robot"></i> Ask About Your Results</h4>
+        <div id="chat-container"></div>
+        <div class="message-input">
+          <input type="text" id="ai-question" placeholder="Type your question...">
+          <button id="ask-ai-btn" class="send-button"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="action-button">
+        <a href="{{ url_for('index') }}" class="new-scan-btn">
+          <i class="fas fa-upload"></i>
+          <span>Analyze Another Scan</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Data for JS access -->
+  <div id="prediction-data"
+       data-class="{{ prediction.class }}"
+       data-class-id="{{ prediction.class_id }}"
+       data-confidence="{{ prediction.confidence }}"
+       data-probabilities="{{ prediction.probabilities|tojson }}"
+       style="display:none;">
+  </div>
+  
+  <div id="scan-data" data-scan='{{ scan_data }}' style="display:none;"></div>
+
+  <script>
+    // Set default theme based on user preference or stored setting
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const storedTheme = localStorage.getItem('theme');
+    const currentTheme = storedTheme || (prefersDarkMode ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    // Enable dark mode toggle
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector('i') : null;
+    
+    function updateThemeIcon(theme) {
+      if (!themeIcon) return;
+      themeIcon.classList.remove('fa-sun', 'fa-moon');
+      themeIcon.classList.add(theme === 'dark' ? 'fa-moon' : 'fa-sun');
+    }
+
+    updateThemeIcon(currentTheme);
+
+    themeToggleBtn?.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    });
+
+    // AI Chat - Optimized for faster responses
+    const chatContainer = document.getElementById('chat-container');
+    const aiQuestion = document.getElementById('ai-question');
+    const askAiBtn = document.getElementById('ask-ai-btn');
+    
+    // Add event listener for Enter key for faster responses
+    aiQuestion?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        askAiQuestion();
+      }
+    });
+
+    askAiBtn?.addEventListener('click', askAiQuestion);
+
+    async function askAiQuestion() {
+      const question = aiQuestion.value.trim();
+      if (!question) return;
+
+      // Add user message immediately
+      addMessage('user', question);
+      
+      // Show loading indicator immediately
+      const loadingId = 'loading-' + Date.now();
+      addMessage('loading', 'Analyzing your scan and generating response...', loadingId);
+      
+      // Clear input
+      aiQuestion.value = '';
+
+      // Get prediction data
+      const predictionData = document.getElementById('prediction-data');
+      let prediction = {};
+      
+      // Safely extract prediction data with error handling
+      try {
+        prediction = {
+          class: predictionData.dataset.class || "Unknown",
+          class_id: predictionData.dataset.classId || "0",
+          confidence: parseFloat(predictionData.dataset.confidence || "0")
+        };
+      } catch (e) {
+        console.error('Error parsing prediction data:', e);
+        prediction = { class: "Unknown", class_id: "0", confidence: 0 };
+      }
+      
+      // Get analysis data from the scan data
+      let analysis = null;
+      try {
+        const scanDataElement = document.getElementById('scan-data');
+        if (scanDataElement && scanDataElement.dataset.scan) {
+          const scanData = JSON.parse(scanDataElement.dataset.scan);
+          analysis = scanData.analysis || {};
+        }
+        
+        // If analysis is still null, create a minimal object to prevent errors
+        if (!analysis) {
+          analysis = {
+            tumor_type: prediction.class || "Unknown",
+            location: "Unknown",
+            size_cm: "Unknown",
+            description: "Analysis data unavailable",
+            clinical_significance: "Please consult a medical professional for interpretation.",
+            precautions: "Seek medical advice."
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing analysis data:', e);
+        // Provide fallback analysis data
+        analysis = {
+          tumor_type: prediction.class || "Unknown",
+          location: "Unknown",
+          size_cm: "Unknown",
+          description: "Analysis data unavailable",
+          clinical_significance: "Please consult a medical professional for interpretation.",
+          precautions: "Seek medical advice."
+        };
+      }
+
+      try {
+        // Add timeout to prevent waiting indefinitely - increased to 30 sec for Ollama
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timed out')), 30000)
+        );
+        
+        console.log("Sending to /ask_ai:", { question, prediction, analysis });
+        
+        // Send request with analysis data for more accurate responses
+        const fetchPromise = fetch('/ask_ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            question, 
+            prediction,
+            analysis // Include the complete tumor analysis with the request
+          }),
+        });
+        
+        // Race between fetch and timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Remove loading message
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) loadingMsg.remove();
+        
+        // Handle empty or invalid responses
+        if (!data.response || data.response.trim() === '') {
+          throw new Error('Empty response received');
+        }
+        
+        // Add AI response
+        addMessage('ai', data.response);
+        
+      } catch (error) {
+        console.error('Error asking AI:', error);
+        
+        // Remove loading message
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) loadingMsg.remove();
+        
+        // Generate a fallback answer based on available data and question type
+        let fallbackAnswer = '';
+        const lowerQuestion = question.toLowerCase();
+        
+        if (analysis && analysis.tumor_type) {
+          // We have tumor analysis data, generate a response based on question type
+          if (lowerQuestion.includes('type') || lowerQuestion.includes('kind') || lowerQuestion.includes('what tumor')) {
+            fallbackAnswer = `Based on the scan analysis, this appears to be a ${analysis.tumor_type || prediction.class} located in the ${analysis.location || 'brain'}. This type of tumor has specific characteristics visible on MRI. For a definitive diagnosis, please consult with a neurosurgeon or neuro-oncologist.`;
+          } 
+          else if (lowerQuestion.includes('location') || lowerQuestion.includes('where')) {
+            fallbackAnswer = `The analysis shows a ${analysis.tumor_type || prediction.class} located in the ${analysis.location || 'brain'}. This location affects both symptoms and treatment approaches. A neurosurgeon can provide more detailed information about the implications of this specific location.`;
+          }
+          else if (lowerQuestion.includes('treatment') || lowerQuestion.includes('therapy') || lowerQuestion.includes('cure')) {
+            fallbackAnswer = `Treatment for ${analysis.tumor_type || prediction.class} typically includes surgery, radiation therapy, and/or chemotherapy depending on the size, location, and grade. The specific treatment plan should be determined by a neurosurgeon or neuro-oncologist based on your individual case.`;
+          }
+          else if (lowerQuestion.includes('precaution') || lowerQuestion.includes('careful') || lowerQuestion.includes('avoid')) {
+            const precautions = analysis.precautions || "Seek medical advice.";
+            fallbackAnswer = `Key precautions for ${analysis.tumor_type || prediction.class}: 1) Avoid strenuous physical activities, 2) Take prescribed medications consistently, 3) Monitor and report new symptoms immediately, 4) Get adequate rest. ${precautions}`;
+          }
+          else if (lowerQuestion.includes('doctor') || lowerQuestion.includes('specialist') || lowerQuestion.includes('surgeon')) {
+            fallbackAnswer = `For ${analysis.tumor_type || prediction.class}, you should consult with a neurosurgeon, neuro-oncologist, or neurologist. Bring your scan results to your appointment for a comprehensive evaluation and personalized treatment plan.`;
+          }
+          else {
+            fallbackAnswer = `The scan shows a ${analysis.tumor_type || prediction.class} in the ${analysis.location || 'brain'}. For specific information about this finding, please consult with a specialist who can provide personalized medical advice based on your complete profile.`;
+          }
+        } else {
+          // Generic fallback
+          fallbackAnswer = "I apologize for the technical difficulty. Based on your scan results, I recommend discussing the findings with your healthcare provider who can give you a complete interpretation and answer your specific questions.";
+        }
+        
+        // Add fallback answer as AI response
+        addMessage('ai', fallbackAnswer);
+      }
+    }
+
+    function addMessage(type, content, id = null) {
+      const messageEl = document.createElement('div');
+      messageEl.className = `chat-message ${type}-message`;
+      if (id) messageEl.id = id;
+      
+      if (type === 'loading') {
+        messageEl.className += ' loading-indicator';
+        messageEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${content}`;
+      } else {
+        const iconClass = type === 'user' ? 'fas fa-user' : type === 'ai' ? 'fas fa-robot' : 'fas fa-exclamation-circle';
+        messageEl.innerHTML = `
+          <div class="message-icon"><i class="${iconClass}"></i></div>
+          <div class="message-content">${content}</div>
+        `;
+      }
+      
+      chatContainer.appendChild(messageEl);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    // Initialize download report button functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const downloadButton = document.getElementById('download-report-btn');
+      if (downloadButton) {
+        downloadButton.addEventListener('click', downloadReport);
+      }
+      
+      // Modal functionality
+      const reportModal = document.getElementById('report-modal');
+      const reportInfoBtn = document.getElementById('report-info-btn');
+      const closeModalBtn = document.querySelector('.report-modal-close');
+      
+      if (reportInfoBtn) {
+        reportInfoBtn.addEventListener('click', function() {
+          reportModal.classList.add('show');
+        });
+      }
+      
+      if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+          reportModal.classList.remove('show');
+        });
+      }
+      
+      // Close modal when clicking outside
+      window.addEventListener('click', function(event) {
+        if (event.target === reportModal) {
+          reportModal.classList.remove('show');
+        }
+      });
+    });
+    
+    // Function to download PDF report
+    async function downloadReport() {
+      try {
+        // Get data from the scan-data element
+        const scanDataElement = document.getElementById('scan-data');
+        if (!scanDataElement || !scanDataElement.dataset.scan) {
+          throw new Error('No scan data available');
+        }
+        
+        const scanData = JSON.parse(scanDataElement.dataset.scan);
+        
+        // Get the image data - either from scan data or from the displayed image
+        let imageData = scanData.image;
+        
+        // If image is not in scan data, try to get it from the displayed image
+        if (!imageData) {
+          const imageElement = document.getElementById('result-image');
+          if (imageElement && imageElement.src) {
+            // Use the src attribute which could be a base64 data URI or a URL
+            imageData = imageElement.src;
+          }
+        }
+        
+        // Show loading state on the button
+        const downloadButton = document.getElementById('download-report-btn');
+        const originalButtonText = downloadButton.innerHTML;
+        downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating PDF...';
+        downloadButton.disabled = true;
+        
+        // Make API request to generate PDF
+        const response = await fetch('/download_report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prediction: scanData.prediction,
+            analysis: scanData.analysis,
+            image: imageData
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+        
+        // Get the blob from the response
+        const blob = await response.blob();
+        
+        // Create a temporary URL for the blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a link element to trigger the download
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Set the filename from the Content-Disposition header if available
+        let filename = 'brain_tumor_report.pdf';
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Restore button state
+        downloadButton.innerHTML = originalButtonText;
+        downloadButton.disabled = false;
+        
+      } catch (error) {
+        console.error('Error downloading report:', error);
+        
+        // Restore button state
+        const downloadButton = document.getElementById('download-report-btn');
+        downloadButton.innerHTML = '<i class="fas fa-download me-2"></i>Download PDF Report';
+        downloadButton.disabled = false;
+        
+        // Show error message
+        alert('Failed to generate PDF report. Please try again later.');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Theme toggle functionality
+      const themeToggleBtn = document.getElementById('theme-toggle-btn');
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeToggleIcon(savedTheme);
+      
+      if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          
+          document.documentElement.setAttribute('data-theme', newTheme);
+          localStorage.setItem('theme', newTheme);
+          updateThemeToggleIcon(newTheme);
+        });
+      }
+      
+      // Update user profile display in sidebar
+      updateUserProfileDisplay();
+      
+      // ... existing JavaScript code ...
+    });
+    
+    // Update theme toggle icon
+    function updateThemeToggleIcon(theme) {
+      const themeToggleBtn = document.getElementById('theme-toggle-btn');
+      if (themeToggleBtn) {
+        const icon = themeToggleBtn.querySelector('i');
+        if (theme === 'dark') {
+          icon.classList.remove('fa-sun');
+          icon.classList.add('fa-moon');
+        } else {
+          icon.classList.remove('fa-moon');
+          icon.classList.add('fa-sun');
+        }
+      }
+    }
+    
+    // Function to update user profile display
+    function updateUserProfileDisplay() {
+      const userProfileContainer = document.getElementById('user-profile-container');
+      if (!userProfileContainer) return;
+      
+      // Always fetch user data from server - it will return guest data if no valid token
+      fetch('/api/user', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('authToken') || localStorage.getItem('token') || ''}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.user) {
+          // Display the user data (whether authenticated or guest)
+          displayUserProfile(data.user, userProfileContainer, data.isGuest);
+        } else {
+          // If server request fails for some reason, use stored data or display guest
+          const token = sessionStorage.getItem('authToken') || localStorage.getItem('token');
+          if (token) {
+            useStoredUserData(userProfileContainer);
+          } else {
+            displayDefaultUser(userProfileContainer);
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching user data from server:', error);
+        // Fall back to stored data or guest
+        const token = sessionStorage.getItem('authToken') || localStorage.getItem('token');
+        if (token) {
+          useStoredUserData(userProfileContainer);
+        } else {
+          displayDefaultUser(userProfileContainer);
+        }
+      });
+    }
+    
+    // Helper function to use stored user data
+    function useStoredUserData(userProfileContainer) {
+      // Check for user data in sessionStorage (from Node.js auth) or localStorage
+      const userData = sessionStorage.getItem('userData') || localStorage.getItem('user');
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          displayUserProfile(user, userProfileContainer);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+    }
+    
+    // Helper function to display user profile
+    function displayUserProfile(user, container, isGuest) {
+      const username = user.username || user.email.split('@')[0]; // Fallback to email username
+      
+      // Generate initials from the username
+      let initials = '';
+      const nameParts = username.split(/[\s_\-\.]+/); // Split by space, underscore, dash or dot
+      if (nameParts.length >= 2) {
+        // Take first letter of first and last part
+        initials = (nameParts[0][0] + nameParts[nameParts.length-1][0]).toUpperCase();
+      } else if (username.length >= 2) {
+        // Take first two letters if single name
+        initials = username.substring(0, 2).toUpperCase();
+      } else if (username.length === 1) {
+        // If only one character
+        initials = username.toUpperCase();
+      } else {
+        // Fallback if no name available
+        initials = 'U';
+      }
+      
+      // Generate a consistent color based on the username
+      const colors = [
+        '#FF5630', '#FF8B00', '#FFC400', '#36B37E', 
+        '#00B8D9', '#6554C0', '#8777D9', '#998DD9', 
+        '#C0B6F2', '#4C9AFF', '#0052CC', '#0747A6'
+      ];
+      const colorIndex = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+      const bgColor = colors[colorIndex];
+      
+      // Different HTML structure based on where the profile is displayed (header vs sidebar)
+      if (container.classList.contains('user-profile-sidebar')) {
+        // Sidebar display (old method, left for compatibility)
+        container.innerHTML = `
+          <div class="user-profile-info">
+            <div class="user-avatar" style="background-color: ${bgColor}; color: white; display: flex; justify-content: center; align-items: center; width: 40px; height: 40px; border-radius: 50%; font-weight: bold;">
+              ${initials}
+            </div>
+            <div class="user-details">
+              <div class="username">${username}</div>
+              <div class="user-role">User</div>
+            </div>
+          </div>
+          <button id="logout-btn" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        `;
+      } else {
+        // Header display (new method)
+        container.innerHTML = `
+          <div class="user-profile-info">
+            <div class="user-avatar" style="background-color: ${bgColor}; color: white; display: flex; justify-content: center; align-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: bold;">
+              ${initials}
+            </div>
+            <div class="username">${username}</div>
+          </div>
+          <button id="logout-btn" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        `;
+      }
+      
+      // Add logout functionality
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+          // Clear user data
+          sessionStorage.removeItem('userData');
+          sessionStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          
+          // Redirect to login page
+          window.location.href = '/';
+        });
+      }
+    }
+    
+    // Display a default guest user when no authentication is available
+    function displayDefaultUser(container) {
+      const bgColor = '#6554C0'; // Default purple color
+      
+      // Header display style
+      container.innerHTML = `
+        <div class="user-profile-info">
+          <div class="user-avatar" style="background-color: ${bgColor}; color: white; display: flex; justify-content: center; align-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: bold;">
+            G
+          </div>
+          <div class="username">Guest</div>
+        </div>
+        <button id="login-btn" class="login-button">
+          <i class="fas fa-sign-in-alt"></i>
+        </button>
+      `;
+      
+      // Add login functionality
+      const loginBtn = document.getElementById('login-btn');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function() {
+          window.location.href = '/login.html';
+        });
+      }
+    }
+  </script>
+</body>
+</html>

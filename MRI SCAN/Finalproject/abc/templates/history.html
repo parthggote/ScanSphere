@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan History - ScanSphere</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Add additional CSS for history features -->
+    <style>
+        /* Time Travel Comparison Styles */
+        .comparison-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .comparison-container.d-none {
+            display: none !important;
+        }
+        
+        .comparison-view {
+            width: 100%;
+            position: relative;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .img-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            background-color: #000;
+        }
+        
+        .comparison-img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+        
+        .img-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            overflow: hidden;
+            border-right: 3px solid white;
+            z-index: 1;
+        }
+        
+        .img-previous {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        
+        .img-current {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background: white;
+            transform: translateX(-50%);
+            cursor: ew-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .slider-handle {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0275d8;
+            font-size: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 11;
+        }
+        
+        /* Voice Notes Styles */
+        .voice-notes-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--card-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .voice-record-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .voice-record-btn.recording {
+            background-color: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .waveform {
+            height: 60px;
+            width: 100%;
+            background-color: rgba(255,255,255,0.1);
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .transcription {
+            padding: 15px;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            min-height: 100px;
+            margin-top: 20px;
+        }
+
+        /* Enhanced metrics styling */
+        .overall-status {
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .bg-danger {
+            background-color: #dc3545 !important;
+        }
+        
+        .bg-success {
+            background-color: #28a745 !important;
+        }
+        
+        .bg-warning {
+            background-color: #ffc107 !important;
+        }
+        
+        .bg-info {
+            background-color: #17a2b8 !important;
+        }
+        
+        .metrics-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .metrics-section {
+            margin-bottom: 20px;
+        }
+
+        .metrics-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #343a40;
+            border-bottom: 2px solid #6c757d;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .metrics-data {
+            font-size: 0.9rem;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #dee2e6;
+        }
+
+        .metric-label {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .metric-value {
+            font-weight: 600;
+        }
+        
+        /* Diagnostic Report Styles */
+        .report-content {
+            margin-top: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        .doctor-note {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .note-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .note-header h5 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .audio-player {
+            width: 100%;
+            background: rgba(0,0,0,0.03);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .audio-player audio {
+            width: 100%;
+        }
+        
+        .transcript {
+            margin-top: 15px;
+        }
+        
+        .transcript p {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+        
+        .scan-info {
+            margin-top: 15px;
+            font-style: italic;
+            color: #777;
+        }
+        
+        #export-report-btn, #print-report-btn {
+            margin: 0 5px;
+        }
+        
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: normal;
+            font-size: 0.8rem;
+        }
+        
+        .bg-primary {
+            background-color: var(--accent-color) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (Same as in index.html) -->
+        <div class="sidebar">
+            <div class="sidebar-top">
+                <div class="logo-container">
+                    <div class="logo-icon">
+                        <img class="logo_img" src="{{ url_for('static', filename='scansphere logo (1).png') }}" alt="Logo">
+                    </div>
+                    <span class="logo-text">ScanSphere</span>
+                </div>
+            </div>
+            <div class="sidebar-content">
+                <div class="sidebar-nav">
+                    <a href="{{ url_for('index') }}" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Results</span>
+                    </a>
+                    <a href="{{ url_for('history') }}" class="nav-item active">
+                        <i class="fas fa-history"></i>
+                        <span>History</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+                
+                <div class="sidebar-divider"></div>
+                
+                <div class="scan-history">
+                    <h6 class="sidebar-title">Recent Scans</h6>
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header-actions">
+                <div id="user-profile-container" class="user-profile-header">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <div class="theme-toggle">
+                    <button id="theme-toggle-btn">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <h2 class="results-title">Scan History</h2>
+            <p class="subtitle">View, compare, and analyze your historical scans</p>
+            
+            <!-- Scan Selection Area -->
+            <div class="results-card">
+                <h4><i class="fas fa-history"></i> Select Scans to Compare</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="scan1">First Scan (Earlier)</label>
+                            <select id="scan1" class="form-control">
+                                <option value="">Select a scan...</option>
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="scan2">Second Scan (Later)</label>
+                            <select id="scan2" class="form-control">
+                                <option value="">Select a scan...</option>
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <button id="compare-btn" class="action-button" disabled>
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Compare Scans</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Scan Comparison (Time Travel) Section -->
+            <div id="comparison-container" class="comparison-container d-none">
+                <h3 class="mb-4 text-center">Time Travel Comparison</h3>
+                <div class="row mb-4">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="comparison-view">
+                            <div class="img-container">
+                                <img id="previous-scan" src="" alt="Previous Scan" class="img-previous comparison-img">
+                                <div class="img-overlay">
+                                    <img id="current-scan" src="" alt="Current Scan" class="img-current comparison-img">
+                                </div>
+                                <div id="comparison-slider" class="slider">
+                                    <div class="slider-handle">
+                                        <i class="fas fa-arrows-alt-h"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">
+                                <small class="text-muted">Drag the slider to compare scans</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="metrics-container">
+                            <div class="metrics-section">
+                                <h4 class="metrics-title">Tumor Metrics</h4>
+                                <div id="tumor-metrics" class="metrics-data">
+                                    <!-- Metrics will be filled in by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="metrics-section">
+                                <h4 class="metrics-title">Analysis</h4>
+                                <div id="analysis-metrics" class="metrics-data">
+                                    <!-- Analysis metrics will be filled in by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Voice Notes Section -->
+            <div id="voice-notes-section" class="results-card">
+                <h4><i class="fas fa-microphone"></i> Voice Notes</h4>
+                <p class="text-muted">Record your observations about the scans</p>
+                
+                <div class="voice-notes-container">
+                    <div class="voice-record-btn" id="voice-record-btn">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    
+                    <div class="waveform" id="waveform">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    
+                    <div class="transcription" id="transcription">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <button id="edit-transcript-btn" class="action-button" style="display: none;">
+                            <i class="fas fa-edit"></i>
+                            <span>Edit Transcript</span>
+                        </button>
+                        <button id="save-notes-btn" class="action-button" style="display: none;">
+                            <i class="fas fa-save"></i>
+                            <span>Save to Report</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>Brain Tumor Detection System | Powered by ONNX Runtime & Flask</p>
+                <button id="debug-btn" class="btn btn-sm btn-outline-secondary mt-2">Debug UI</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@6.6.3/dist/wavesurfer.min.js"></script>
+    <script src="{{ url_for('static', filename='history.js') }}"></script>
+    <script>
+        // Debug button functionality
+        document.getElementById('debug-btn').addEventListener('click', function() {
+            const comparisonContainer = document.getElementById('comparison-container');
+            
+            // Toggle visibility directly
+            if (comparisonContainer.style.display === 'none' || comparisonContainer.classList.contains('d-none')) {
+                comparisonContainer.classList.remove('d-none');
+                comparisonContainer.style.display = 'block';
+                console.log("Debug: Showing comparison container");
+                
+                // Force displaying sample images
+                const previousScan = document.getElementById('previous-scan');
+                const currentScan = document.getElementById('current-scan');
+                
+                if (previousScan) {
+                    previousScan.src = 'https://dummyimage.com/600x600/000/fff&text=Debug+Image+1';
+                    previousScan.style.width = '100%';
+                    previousScan.style.height = '100%';
+                    previousScan.style.display = 'block';
+                }
+                
+                if (currentScan) {
+                    currentScan.src = 'https://dummyimage.com/600x600/000/fff&text=Debug+Image+2';
+                    currentScan.style.width = '100%';
+                    currentScan.style.height = '100%';
+                    currentScan.style.display = 'block';
+                }
+                
+                // Force metrics display
+                const tumorMetrics = document.getElementById('tumor-metrics');
+                const analysisMetrics = document.getElementById('analysis-metrics');
+                
+                if (tumorMetrics) {
+                    tumorMetrics.innerHTML = `
+                        <div class="metric-item">
+                            <span class="metric-label">Previous Size:</span>
+                            <span class="metric-value">15.8 mm</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Current Size:</span>
+                            <span class="metric-value">17.4 mm</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Size Change:</span>
+                            <span class="metric-value text-danger">10.1% growth</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Previous Area:</span>
+                            <span class="metric-value">196.3 mm²</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Current Area:</span>
+                            <span class="metric-value">237.8 mm²</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Area Change:</span>
+                            <span class="metric-value text-danger">21.1%</span>
+                        </div>
+                    `;
+                    console.log("Debug: Added sample tumor metrics");
+                }
+                
+                if (analysisMetrics) {
+                    analysisMetrics.innerHTML = `
+                        <div class="overall-status mb-3 p-2 rounded bg-danger">
+                            <h5 class="text-white mb-1">Concerning Growth</h5>
+                            <p class="text-white mb-0 small">Significant tumor growth detected with high confidence. Medical attention recommended.</p>
+                        </div>
+                        
+                        <div class="metric-item">
+                            <span class="metric-label">Previous Classification:</span>
+                            <span class="metric-value">Meningioma</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Current Classification:</span>
+                            <span class="metric-value">Meningioma</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Timeframe:</span>
+                            <span class="metric-value">1 month</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Growth Rate:</span>
+                            <span class="metric-value text-danger">0.05 mm/day</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Location:</span>
+                            <span class="metric-value">Frontal lobe</span>
+                        </div>
+                    `;
+                    console.log("Debug: Added sample analysis metrics");
+                }
+                
+                // Setup overlay and slider
+                const imgOverlay = document.querySelector('.img-overlay');
+                const slider = document.getElementById('comparison-slider');
+                
+                if (imgOverlay) imgOverlay.style.width = '50%';
+                if (slider) slider.style.left = '50%';
+                
+                // Log the state of key elements
+                console.log("Debug state:", {
+                    comparisonContainer: comparisonContainer ? getComputedStyle(comparisonContainer).display : 'missing',
+                    previousScan: previousScan ? getComputedStyle(previousScan).display : 'missing',
+                    currentScan: currentScan ? getComputedStyle(currentScan).display : 'missing',
+                    imgOverlay: imgOverlay ? getComputedStyle(imgOverlay).display : 'missing',
+                    tumorMetrics: tumorMetrics ? tumorMetrics.innerHTML.substring(0, 50) + "..." : 'missing',
+                    analysisMetrics: analysisMetrics ? analysisMetrics.innerHTML.substring(0, 50) + "..." : 'missing'
+                });
+            } else {
+                comparisonContainer.style.display = 'none';
+                comparisonContainer.classList.add('d-none');
+                console.log("Debug: Hiding comparison container");
+            }
+        });
+    </script>
+</body>
+</html> 

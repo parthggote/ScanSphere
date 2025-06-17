@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Ollama Response Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Raw Ollama Response Tester</h1>
+        <p>This page allows you to directly test Ollama responses with minimal processing.</p>
+        
+        <div class="form-group">
+            <label for="question">Patient Question:</label>
+            <textarea id="question" placeholder="Enter your medical question here..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="tumor-type">Tumor Type:</label>
+            <select id="tumor-type">
+                <option value="brain tumor">Brain Tumor (Generic)</option>
+                <option value="pituitary adenoma">Pituitary Adenoma</option>
+                <option value="meningioma">Meningioma</option>
+                <option value="glioma">Glioma</option>
+                <option value="glioblastoma">Glioblastoma</option>
+                <option value="acoustic neuroma">Acoustic Neuroma</option>
+            </select>
+        </div>
+        
+        <button id="submit-btn">Get Raw Ollama Response</button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating response from Ollama (this may take up to 60 seconds)...</p>
+        </div>
+        
+        <div class="result" id="result">
+            <h3>Prompt Sent to Ollama:</h3>
+            <pre id="prompt-display"></pre>
+            
+            <h3>Raw Ollama Response:</h3>
+            <pre id="response-display"></pre>
+            
+            <div id="metadata"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('submit-btn').addEventListener('click', async function() {
+            const question = document.getElementById('question').value.trim();
+            const tumorType = document.getElementById('tumor-type').value;
+            
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('submit-btn').disabled = true;
+            
+            try {
+                const response = await fetch('/raw_ollama', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        tumor_type: tumorType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading and enable button
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submit-btn').disabled = false;
+                
+                // Display results
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('prompt-display').textContent = data.prompt || 'Prompt not available';
+                document.getElementById('response-display').textContent = data.raw_response || 'No response received';
+                document.getElementById('metadata').innerHTML = `
+                    <p><strong>Generation Time:</strong> ${data.generation_time || 'Unknown'}</p>
+                    <p><strong>Status:</strong> ${data.status || 'Unknown'}</p>
+                `;
+                
+                if (data.error) {
+                    document.getElementById('response-display').textContent = `ERROR: ${data.error}`;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submit-btn').disabled = false;
+                alert('Error fetching response: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html> 
