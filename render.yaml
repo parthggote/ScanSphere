@@ -28,8 +28,8 @@ services:
     envVars:
       - key: FLASK_SECRET_KEY
         value: "brain_tumor_detection_fallback_secret_key" # Replace with a strong, random secret
-      - key: OLLAMA_API_URL
-        value: "http://localhost:11434" # Or your deployed Ollama URL if separate service
+      - key: OPENAI_API_KEY
+        sync: false # Set this in the Render dashboard for security
       - key: PORT
         value: 5000 # Or desired port for frontend (Flask)
     healthCheckPath: / 
