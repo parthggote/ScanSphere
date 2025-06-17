@@ -28,9 +28,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Image as ReportLabImage
 import torch
 from torchvision import transforms
-import ollama
 import re
 import jwt
+import openai
 
 # PIL imports - consolidated
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance, ImageDraw
@@ -60,10 +60,6 @@ app.config['RESIZE_QUALITY'] = RESIZE_QUALITY
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Configure Ollama to use custom port from env var or default to localhost for local dev
-ollama.host = os.environ.get("OLLAMA_API_URL", "http://127.0.0.1:11500")
-logger.info(f"Ollama configured to use host: {ollama.host}")
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -352,68 +348,28 @@ def predict(session, image_tensor):
         logger.error(f"Prediction error: {e}")
         return None
 
+def get_llm_response(prompt):
+    openai.api_key = os.environ.get("OPENAI_API_KEY")
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message["content"]
+
 def generate_report_directly(class_id, confidence_rounded):
-    """Generate detailed diagnostic report directly based on image analysis"""
     if class_id == 0:
         status = "no tumor detected"
         emoji = "✅"
-        prompt = f"""Brain MRI scan analysis:
-        
-Findings: {emoji} {status}
-Confidence: {confidence_rounded}%
-
-Generate a completely unique comprehensive medical report with these sections:
-1. Clinical Interpretation (describe normal brain appearance)
-2. Recommended Next Steps (appropriate follow-up)
-3. Notes on AI Limitations (importance of clinical correlation)
-
-Format as HTML with <h3> for headings and <p> for paragraphs. No markdown."""
-
+        prompt = f"""Brain MRI scan analysis:\n\nFindings: {emoji} {status}\nConfidence: {confidence_rounded}%\n\nGenerate a completely unique comprehensive medical report with these sections:\n1. Clinical Interpretation (describe normal brain appearance)\n2. Recommended Next Steps (appropriate follow-up)\n3. Notes on AI Limitations (importance of clinical correlation)\n\nFormat as HTML with <h3> for headings and <p> for paragraphs. No markdown."""
     else:
         status = f"a tumor detected with {confidence_rounded}% confidence"
         emoji = "⚠️"
-        prompt = f"""Brain MRI scan analysis:
-        
-Findings: {emoji} {status}
-Confidence: {confidence_rounded}%
-
-Generate a completely unique detailed medical report with these sections:
-1. Clinical Interpretation (describe likely tumor types based on confidence: {confidence_rounded}%)
-2. Tumor Location & Characteristics (likely location based on MRI pattern)
-3. Potential Causes and Risk Factors (genetic, environmental, etc.)
-4. Precautions & Immediate Actions (what patient should and should not do)
-5. Recommended Next Steps (urgency level, specialist referral, additional tests)
-6. Notes on AI Limitations (importance of clinical correlation)
-
-Be specific about possible tumor types (glioma, meningioma, etc.) and likely locations (frontal lobe, temporal lobe, cerebellum, etc.) based on typical presentation patterns.
-Format as HTML with <h3> for headings, <p> for paragraphs, and <ul>/<li> for lists. No markdown."""
-
+        prompt = f"""Brain MRI scan analysis:\n\nFindings: {emoji} {status}\nConfidence: {confidence_rounded}%\n\nGenerate a completely unique detailed medical report with these sections:\n1. Clinical Interpretation (describe likely tumor types based on confidence: {confidence_rounded}%)\n2. Tumor Location & Characteristics (likely location based on MRI pattern)\n3. Potential Causes and Risk Factors (genetic, environmental, etc.)\n4. Precautions & Immediate Actions (what patient should and should not do)\n5. Recommended Next Steps (urgency level, specialist referral, additional tests)\n6. Notes on AI Limitations (importance of clinical correlation)\n\nBe specific about possible tumor types (glioma, meningioma, etc.) and likely locations (frontal lobe, temporal lobe, cerebellum, etc.) based on typical presentation patterns.\nFormat as HTML with <h3> for headings, <p> for paragraphs, and <ul>/<li> for lists. No markdown."""
     try:
-        logger.info(f"Generating report using Ollama at custom port 11500")
-        
-        # Direct API call to Ollama with correct port
-        response = requests.post(
-            "http://127.0.0.1:11500/api/generate",
-            json={
-                "model": "llama2",
-                "prompt": prompt,
-                "options": {'temperature': 0.7, 'max_tokens': 600}
-            },
-            timeout=60  # Add a timeout to prevent hanging
-        )
-        
-        if response.status_code == 200:
-            logger.info("Successfully received response from Ollama")
-            return response.json()['response']
-        else:
-            logger.error(f"Ollama API error: Status {response.status_code}, {response.text}")
-            raise Exception(f"Ollama API error: {response.status_code}")
-            
+        return get_llm_response(prompt)
     except Exception as e:
-        logger.error(f"Ollama error in generate_report_directly: {e}")
-        logger.error(f"Attempted Ollama host: http://127.0.0.1:11500")
-        logger.error(traceback.format_exc())
-        # Return basic report as fallback
+        logger.error(f"OpenAI error in generate_report_directly: {e}")
+        # Fallback basic report
         if class_id == 0:
             return "<h3>Clinical Interpretation</h3><p>No tumor detected. Normal brain tissue appearance.</p><h3>Next Steps</h3><p>Consult with your physician.</p>"
         else:
@@ -1284,82 +1240,12 @@ Answer:"""
             return jsonify({'response': predefined_answer})
         
         try:
-            # Make the API call to Ollama
-            response = ollama.generate(
-                model='llama2',
-                prompt=prompt,
-                options={
-                    'temperature': 0.3,
-                    'max_tokens': 120,  # Limiting tokens to keep answers brief
-                    'top_p': 0.9,
-                    'stop': ['###', '```', '\n\n\n']
-                }
-            )
-            
-            answer = response['response'].strip()
-            
-            # Clean up any artifacts
-            if answer.lower().startswith("answer:"):
-                answer = answer[7:].strip()
-                
-            # Remove dramatic openings
-            dramatic_starts = ["oh no!", "i'm sorry", "unfortunately", "i regret to inform", "this is concerning"]
-            for start in dramatic_starts:
-                if answer.lower().startswith(start):
-                    answer = answer[len(start):].strip()
-                    # Clean up punctuation after removing the start
-                    if answer.startswith(",") or answer.startswith(":") or answer.startswith("."):
-                        answer = answer[1:].strip()
-            
-            # If asked about Indian doctors and the response doesn't mention specific names
-            if "indian doctor" in question.lower() or "indian specialist" in question.lower() or "indian physicians" in question.lower():
-                if not any(term in answer.lower() for term in ["dr.", "doctor", "specialist", "prof.", "professor"]):
-                    # Add some specific doctor suggestions
-                    indian_specialists = "Some well-known neurosurgeons in India include Dr. B.K. Misra, Dr. Satnam Singh Chhabra, and Dr. Suresh Nair. Please consult your local medical center for specialists in your area."
-                    answer = indian_specialists
-            
-            # If asked about precautions and the answer is too long or doesn't use the analysis data
-            if "precaution" in question.lower():
-                if len(answer.split()) > 60 or (precautions and not any(p.lower() in answer.lower() for p in precautions.split(".")[:3])):
-                    # Use precautions from the analysis if available, otherwise use fallback
-                    if precautions:
-                        precaution_lines = [p.strip() for p in precautions.split(".") if p.strip()]
-                        if len(precaution_lines) >= 3:
-                            formatted_precautions = ""
-                            for i, p in enumerate(precaution_lines[:4], 1):
-                                formatted_precautions += f"{i}) {p.strip()}. "
-                            answer = f"Key precautions for your {tumor_type}: {formatted_precautions}Consult your doctor for personalized advice."
-                    else:
-                        # Fallback if no precautions in analysis
-                        answer = f"Key precautions for {tumor_type}: 1) Avoid strenuous physical activities that increase blood pressure, 2) Take prescribed medications consistently, 3) Monitor and report new symptoms immediately, 4) Maintain regular follow-up appointments. Consult your doctor for personalized advice."
-            
-            # Log completion time
-            logger.info(f"AI response generated in {time.time() - start_time:.2f}s")
-            
+            answer = get_llm_response(prompt, model="gpt-3.5-turbo")
             return jsonify({'response': answer})
-            
         except Exception as api_error:
-            logger.error(f"Ollama API error: {str(api_error)}")
-            
-            # Provide fallback response based on available analysis data
-            if "indian" in question_lower and ("doctor" in question_lower or "specialist" in question_lower):
-                answer = "Some well-known neurosurgeons in India include Dr. B.K. Misra, Dr. Satnam Singh Chhabra, and Dr. Suresh Nair. Please consult your local medical center for specialists in your area."
-            elif "precaution" in question_lower:
-                if precautions:
-                    # Extract precautions from analysis
-                    precaution_lines = [p.strip() for p in precautions.split(".") if p.strip()]
-                    if len(precaution_lines) >= 3:
-                        formatted_precautions = ""
-                        for i, p in enumerate(precaution_lines[:4], 1):
-                            formatted_precautions += f"{i}) {p.strip()}. "
-                        answer = f"Key precautions for your {tumor_type}: {formatted_precautions}Consult your doctor for personalized advice."
-                else:
-                    answer = f"Key precautions for {tumor_type}: 1) Avoid strenuous physical activities that increase blood pressure, 2) Take prescribed medications consistently, 3) Monitor and report new symptoms immediately, 4) Get adequate rest. Consult your doctor for personalized advice."
-            else:
-                answer = f"Your MRI shows a {tumor_type} in the {tumor_location}. {clinical_significance} Please consult with a specialist for personalized guidance based on your specific medical situation."
-            
-            return jsonify({'response': answer})
-        
+            logger.error(f"OpenAI API error: {str(api_error)}")
+            # Provide fallback response
+            return jsonify({'response': 'AI service unavailable. Please consult a doctor.'})
     except Exception as e:
         logger.error(f"AI chat error: {e}")
         return jsonify({
@@ -2017,51 +1903,6 @@ def format_tumor_report(analysis):
     <p>Analysis timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     """
 
-@app.route('/test_ollama', methods=['GET'])
-def test_ollama():
-    """Test endpoint to verify Ollama connectivity"""
-    try:
-        logger.info(f"Testing Ollama connectivity at http://127.0.0.1:11500")
-        
-        # Simple test prompt
-        test_prompt = "Hello, please respond with 'Ollama is working correctly on port 11500'"
-        
-        # Try to generate a response with direct API call
-        response = requests.post(
-            "http://127.0.0.1:11500/api/generate",
-            json={
-                "model": "llama2",
-                "prompt": test_prompt,
-                "options": {'temperature': 0.1, 'max_tokens': 50}
-            },
-            timeout=30  # 30-second timeout
-        )
-        
-        if response.status_code != 200:
-            raise Exception(f"Ollama API returned status code {response.status_code}: {response.text}")
-        
-        result = response.json()
-        answer = result.get('response', '').strip()
-        
-        logger.info(f"Ollama test successful. Response: {answer}")
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Ollama connection successful',
-            'host': 'http://127.0.0.1:11500',
-            'response': answer
-        })
-        
-    except Exception as e:
-        logger.error(f"Ollama test failed: {e}")
-        logger.error(traceback.format_exc())
-        
-        return jsonify({
-            'status': 'error',
-            'message': f'Failed to connect to Ollama: {str(e)}',
-            'host': 'http://127.0.0.1:11500'
-        }), 500
-
 def generate_dynamic_prompt(question, tumor_type, prediction, question_type, keywords):
     """Generate a dynamic prompt based on the question type and keywords to get better responses from Ollama"""
     
@@ -2106,91 +1947,6 @@ Important rules:
 Answer:"""
     
     return prompt
-
-@app.route('/raw_ollama', methods=['POST'])
-def raw_ollama():
-    """Endpoint for getting raw, unmodified responses directly from Ollama"""
-    try:
-        data = request.get_json()
-        question = data.get('question', '').strip()
-        tumor_type = data.get('tumor_type', 'brain tumor')
-        start_time = time.time()
-        
-        if not question:
-            return jsonify({'error': 'Empty question'}), 400
-        
-        logger.info(f"Raw Ollama request received for question: {question}")
-        
-        # Create a simple prompt
-        prompt = f"""Provide a factual, medically accurate answer to this patient question about their brain MRI scan showing {tumor_type}.
-
-Patient question: "{question}"
-
-Answer:"""
-        
-        try:
-            # Configure a session with retries and extended timeouts
-            session = requests.Session()
-            retries = Retry(total=1, backoff_factor=0.5, allowed_methods=["POST"])
-            session.mount('http://', HTTPAdapter(max_retries=retries))
-            
-            # Prepare the request payload
-            payload = {
-                "model": "llama2",
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    'temperature': 0.2,
-                    'max_tokens': 350
-                }
-            }
-            
-            # Make the API call
-            response = session.post(
-                'http://127.0.0.1:11500/api/generate',
-                json=payload,
-                headers={'Content-Type': 'application/json'},
-                timeout=(10, 60)
-            )
-            
-            # Process the response
-            if response.status_code == 200:
-                response_data = response.json()
-                raw_answer = response_data.get('response', '').strip()
-                logger.info(f"Raw Ollama response received, length: {len(raw_answer)}")
-                
-                # Return the completely unmodified response
-                return jsonify({
-                    'raw_response': raw_answer,
-                    'prompt': prompt,
-                    'generation_time': f"{time.time() - start_time:.2f}s",
-                    'status': 'success'
-                })
-            else:
-                return jsonify({
-                    'error': f"Ollama API error: {response.status_code}",
-                    'content': response.text[:300],
-                    'status': 'error'
-                }), 500
-                
-        except Exception as e:
-            logger.error(f"Raw Ollama request failed: {str(e)}")
-            return jsonify({
-                'error': f"Failed to get Ollama response: {str(e)}",
-                'status': 'error'
-            }), 500
-    
-    except Exception as e:
-        logger.error(f"Raw Ollama endpoint error: {str(e)}")
-        return jsonify({
-            'error': f"Error processing request: {str(e)}",
-            'status': 'error'
-        }), 500
-
-@app.route('/raw_ollama_form')
-def raw_ollama_form():
-    """Simple form for testing raw Ollama responses"""
-    return render_template('raw_ollama.html')
 
 @app.route('/download_report', methods=['POST'])
 def download_report():

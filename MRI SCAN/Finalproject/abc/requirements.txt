@@ -10,5 +10,5 @@ opencv-python-headless
 pyjwt
 requests
 python-dotenv
-ollama
-gunicorn 
+gunicorn
+openai 
