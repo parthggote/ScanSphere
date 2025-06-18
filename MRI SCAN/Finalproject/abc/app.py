@@ -235,5 +235,41 @@ def upload_file():
     # TODO: Add upload handling logic here
     return 'Upload endpoint hit'
 
+@app.route('/ask_ai', methods=['POST'])
+@limiter.limit("10 per minute")
+def ask_ai():
+    try:
+        data = request.json
+        if not data or not all(key in data for key in ['question', 'prediction', 'analysis']):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Construct the prompt
+        prompt = f"Question: {data['question']}\nPrediction: {data['prediction']}\nAnalysis: {data['analysis']}"
+        
+        # Make the API call to OpenAI
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that explains brain MRI predictions."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+        
+        # Extract and return the response
+        ai_response = response['choices'][0]['message']['content']
+        return jsonify({'response': ai_response}), 200
+        
+    except openai.error.RateLimitError:
+        app.logger.error("OpenAI API rate limit exceeded")
+        return jsonify({'error': 'OpenAI API rate limit exceeded. Please try again later.'}), 429
+    except openai.error.APIError as e:
+        app.logger.error(f"OpenAI API error: {str(e)}")
+        return jsonify({'error': f'OpenAI API error: {str(e)}'}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error in ask_ai: {str(e)}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
