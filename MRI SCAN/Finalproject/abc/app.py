@@ -160,6 +160,10 @@ def create_jwt():
 def index():
     return render_template('index.html')
     
+@app.route('/history')
+def history():
+    return render_template('history.html')
+
 @app.route('/index.html')
 def index_html():
     return render_template('index.html')
