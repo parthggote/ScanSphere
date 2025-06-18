@@ -1,5 +1,5 @@
 numpy
-flask
+flask-cors
 werkzeug
 reportlab
 scipy
