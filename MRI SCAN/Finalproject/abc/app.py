@@ -1,7 +1,9 @@
 import os
 import base64
 import io
-from flask import Flask, request, jsonify, send_file, render_template
+import time
+from datetime import datetime
+from flask import Flask, request, jsonify, send_file, render_template, url_for, redirect
 from flask_cors import CORS
 import openai
 from dotenv import load_dotenv
@@ -9,9 +11,9 @@ import jwt
 import datetime
 from fpdf import FPDF
 from functools import wraps
-import time
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.utils import secure_filename
 
 # Load environment variables
 load_dotenv()
@@ -27,7 +29,12 @@ openai.api_key = OPENAI_API_KEY
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 CORS(app)
+
+# Create uploads directory if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize rate limiter
 limiter = Limiter(
@@ -39,6 +46,42 @@ limiter = Limiter(
 # Cache for OpenAI responses
 response_cache = {}
 CACHE_EXPIRY = 3600  # 1 hour in seconds
+
+def allowed_file(filename):
+    """Check if the file extension is allowed"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def predict_image(file_path):
+    """Mock function to simulate image prediction - replace with actual model inference"""
+    # This is a placeholder - replace with actual model inference
+    return {
+        'class': 'Normal',
+        'class_id': 0,
+        'confidence': 87.3,
+        'probabilities': [0.127, 0.873]
+    }
+
+def generate_diagnostic_report(prediction):
+    """Generate a diagnostic report based on the prediction"""
+    if prediction['class_id'] == 0:
+        return f"""
+        <div class='diagnostic-report'>
+            <h3>Diagnostic Report</h3>
+            <p>Based on the analysis of the MRI scan, no significant abnormalities were detected.</p>
+            <p>Confidence: {prediction['confidence']}%</p>
+            <p>Recommendation: Regular follow-up as per standard protocol.</p>
+        </div>
+        """
+    else:
+        return f"""
+        <div class='diagnostic-report'>
+            <h3>Diagnostic Report</h3>
+            <p>Based on the analysis of the MRI scan, potential abnormalities were detected.</p>
+            <p>Confidence: {prediction['confidence']}%</p>
+            <p>Recommendation: Please consult with a medical professional for further evaluation.</p>
+        </div>
+        """
 
 def cache_response(func):
     @wraps(func)
@@ -88,7 +131,6 @@ def llm():
 
 @app.route('/predict', methods=['POST'])
 @limiter.limit("5 per minute")
-@cache_response
 def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -97,31 +139,47 @@ def predict():
     if not file.filename:
         return jsonify({'error': 'No file selected'}), 400
     
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type'}), 400
+    
     try:
-        image_bytes = file.read()
-        if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
-            return jsonify({'error': 'File size too large. Maximum size is 10MB.'}), 400
-            
-        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-        prompt = (
-            "You are a medical AI assistant. Given the following MRI scan image (base64-encoded), "
-            "analyze it and answer: Does this scan show a brain tumor? Respond with a clear yes/no and a brief explanation. "
-            "Base64 image: " + image_b64
-        )
+        # Save the uploaded file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
         
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
-            temperature=0.3  # Lower temperature for more consistent medical analysis
-        )
-        return jsonify({'result': response['choices'][0]['message']['content']}), 200
-    except openai.error.RateLimitError:
-        return jsonify({'error': 'OpenAI API rate limit exceeded. Please try again later.'}), 429
-    except openai.error.APIError as e:
-        return jsonify({'error': f'OpenAI API error: {str(e)}'}), 500
+        # Start timing
+        start_time = time.time()
+        
+        # Get prediction
+        prediction = predict_image(file_path)
+        
+        # Generate diagnostic report
+        diagnostic_report = generate_diagnostic_report(prediction)
+        
+        # Calculate processing time
+        processing_time = f"{time.time() - start_time:.2f}s"
+        
+        # Prepare scan data for JavaScript
+        scan_data = {
+            'filename': filename,
+            'prediction': prediction['class'],
+            'analysis': diagnostic_report
+        }
+        
+        # Render result template
+        return render_template('result.html',
+                             image_file=os.path.join('uploads', filename),
+                             is_base64=False,
+                             prediction=prediction,
+                             diagnostic_report=diagnostic_report,
+                             processing_time=processing_time,
+                             scan_data=scan_data)
+                             
     except Exception as e:
-        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
 @app.route('/generate_pdf', methods=['POST'])
 @limiter.limit("20 per minute")
