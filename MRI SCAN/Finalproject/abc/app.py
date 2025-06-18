@@ -140,12 +140,12 @@ def predict():
         return jsonify({'error': 'No file selected'}), 400
     
     if not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file type'}), 400
+        return jsonify({'error': 'Invalid file type. Please upload a PNG, JPG, JPEG, or GIF file.'}), 400
     
     try:
         # Save the uploaded file
         filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"{timestamp}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
@@ -166,12 +166,14 @@ def predict():
         scan_data = {
             'filename': filename,
             'prediction': prediction['class'],
-            'analysis': diagnostic_report
+            'analysis': diagnostic_report,
+            'confidence': prediction['confidence'],
+            'probabilities': prediction['probabilities']
         }
         
-        # Render result template
+        # Render result template with proper static file URL
         return render_template('result.html',
-                             image_file=os.path.join('uploads', filename),
+                             image_file=url_for('static', filename=os.path.join('uploads', filename)),
                              is_base64=False,
                              prediction=prediction,
                              diagnostic_report=diagnostic_report,
@@ -179,6 +181,8 @@ def predict():
                              scan_data=scan_data)
                              
     except Exception as e:
+        # Log the error for debugging
+        app.logger.error(f"Error processing image: {str(e)}")
         return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
 @app.route('/generate_pdf', methods=['POST'])
