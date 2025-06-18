@@ -31,7 +31,7 @@
                         <i class="fas fa-chart-line"></i>
                         <span>Results</span>
                     </a>
-                    <a href="{{ url_for('history') }}" class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-item">
                         <i class="fas fa-history"></i>
                         <span>History</span>
                     </a>
@@ -80,7 +80,7 @@
             
             <div class="results-card upload-card">
                 <h4><i class="fas fa-upload"></i> Upload MRI Scan</h4>
-                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="upload-form">
+                <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data" id="upload-form">
                     <div class="upload-area" id="drop-area">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
                         <h4>Drag & Drop or Click to Upload</h4>
