@@ -14,8 +14,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the 'public' directory
+// Serve static files from multiple directories
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'assets')));
+app.use(express.static(path.join(__dirname, 'templates')));
 
 // Improved request logging middleware
 app.use((req, res, next) => {
@@ -38,9 +40,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve the database viewer web interface at root URL
+// Serve the index.html from templates folder at root URL
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'users.html'));
+  res.sendFile(path.join(__dirname, 'templates', 'index.html'));
 });
 
 // Health check route with improved database testing
@@ -247,7 +249,7 @@ app.post('/api/login', async (req, res) => {
     console.log(`User login successful: ${email}`);
     
     // Flask application URL for direct redirection
-    const flaskAppUrl = `http://127.0.0.1:5000?token=${token}&username=${encodeURIComponent(user.username)}&email=${encodeURIComponent(user.email)}&user_id=${user._id}`;
+    const flaskAppUrl = `https://scansphere-1.onrender.com?token=${token}&username=${encodeURIComponent(user.username)}&email=${encodeURIComponent(user.email)}&user_id=${user._id}`;
     
     res.json({
       success: true,
