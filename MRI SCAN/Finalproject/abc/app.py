@@ -168,5 +168,10 @@ def history():
 def index_html():
     return render_template('index.html')
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    # TODO: Add upload handling logic here
+    return 'Upload endpoint hit'
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
