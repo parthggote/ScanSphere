@@ -1,5 +1,7 @@
 numpy
-flask-cors
+Flask
+Flask-Cors
+Flask-Limiter
 werkzeug
 reportlab
 scipy
@@ -8,4 +10,4 @@ requests
 python-dotenv
 gunicorn
 openai 
-fpdf==1.7.2
+fpdf
